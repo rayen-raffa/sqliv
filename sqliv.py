@@ -72,6 +72,20 @@ def initparser():
     parser.add_argument('-r', dest="reverse", help="reverse domain", action='store_true')
     parser.add_argument('-o', dest="output", help="output result into json", type=str, metavar="result.json")
     parser.add_argument('-s', action='store_true', help="output search even if there are no results")
+    parser.add_argument('-u', dest="urls", help="url to test", type=str, metavar="urls.csv")
+
+def read_urls_file(path):
+    try:
+        with open(path, 'r') as urls_file:
+            # Read all lines in file
+            lines = urls_file.readlines()
+            # Remove header line
+            lines = lines[1:]
+            urls = [row[1] for row in lines]
+        return urls
+    except Exception as e:
+        print "Error reading lines - {}".format(e)
+        return []
 
 
 if __name__ == "__main__":
@@ -174,6 +188,12 @@ if __name__ == "__main__":
         print ""  # give space between two table
         std.normalprint(vulnerables)
         exit(0)
+
+    elif args.urls:
+        print("Reading from file {}".format(args.urls))
+        urls = read_urls_file(args.urls)
+        print "Found {} urls".format(len(urls))
+        
 
     # print help message, if no parameter is provided
     else:
