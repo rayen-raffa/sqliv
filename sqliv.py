@@ -4,6 +4,7 @@
 
 import argparse
 from urlparse import urlparse
+import csv
 
 from src import std
 from src import scanner
@@ -72,21 +73,23 @@ def initparser():
     parser.add_argument('-r', dest="reverse", help="reverse domain", action='store_true')
     parser.add_argument('-o', dest="output", help="output result into json", type=str, metavar="result.json")
     parser.add_argument('-s', action='store_true', help="output search even if there are no results")
-    parser.add_argument('-u', dest="urls", help="url to test", type=str, metavar="urls.csv")
+    parser.add_argument('-f', dest="urls", help="url file to test", type=str, metavar="urls.csv")
 
 def read_urls_file(path):
+    urls = []
     try:
         with open(path, 'r') as urls_file:
             # Read all lines in file
-            lines = urls_file.readlines()
+            reader = csv.reader(urls_file, delimiter=',')
+            rows = list(reader)
             # Remove header line
-            lines = lines[1:]
-            urls = [row[1] for row in lines]
-        return urls
+            rows = rows[1:]
+            urls = [row[1] for row in rows] # USE If 2-column file
+            # urls = rows # USE If 1-column file
     except Exception as e:
         print "Error reading lines - {}".format(e)
-        return []
 
+    return urls
 
 if __name__ == "__main__":
     initparser()
@@ -192,8 +195,26 @@ if __name__ == "__main__":
     elif args.urls:
         print("Reading from file {}".format(args.urls))
         urls = read_urls_file(args.urls)
-        print "Found {} urls".format(len(urls))
+        print "Found {} urls.\n{}".format(len(urls),urls[:5])
         
+        vulnerables = scanner.scan(urls)
+
+        if not vulnerables:
+            if args.s:
+                std.stdout("saved as searches.txt")
+                std.dump(websites, "searches.txt")
+
+            exit(0)
+
+        std.stdout("scanning server information")
+
+        vulnerableurls = [result[0] for result in vulnerables]
+        table_data = serverinfo.check(vulnerableurls)
+        # add db name to info
+        for result, info in zip(vulnerables, table_data):
+            info.insert(1, result[1])  # database name
+
+        std.fullprint(table_data)
 
     # print help message, if no parameter is provided
     else:
